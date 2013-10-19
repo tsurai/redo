@@ -1,5 +1,7 @@
+import Debug.Trace
 import Control.Monad
 import Data.Maybe
+import Data.Map.Lazy
 import System.Directory
 import System.Process
 import System.Exit
@@ -14,7 +16,9 @@ redo :: String -> IO ()
 redo target = maybe printMissing redo' =<< redoPath target
   where redo' :: FilePath -> IO ()
         redo' path = do
-          (_, _, _, ph) <- createProcess $ shell $ cmd path
+          oldEnv <- getEnvironment
+          let newEnv = toList $ adjust (++ ":.") "PATH" $ insert "REDO_TARGET" target $ fromList oldEnv
+          (_, _, _, ph) <- createProcess $ (shell $ cmd path) {env = Just newEnv}
           exit <- waitForProcess ph
           case exit of
             ExitSuccess -> do renameFile tmp target
